@@ -1,7 +1,5 @@
 from fastai.vision.all import *
 import pandas as pd
-import torch
-import cv2
 from PIL import Image, ImageDraw, ImageFont
 import streamlit as st
 from streamlit_option_menu import option_menu
@@ -9,6 +7,7 @@ import os
 import numpy as np
 import tempfile
 import pygame
+import cv2
 
 # ---------------------------------------------------
 # LOAD MODEL
@@ -44,7 +43,7 @@ def analyze_image_for_mask_temp(image_pil):
         return None, None
 
 def detect_faces_dnn(image_np):
-    """Detect faces using OpenCV DNN"""
+    """Detect faces using OpenCV DNN (works with headless opencv)"""
     modelFile = "res10_300x300_ssd_iter_140000_fp16.caffemodel"
     configFile = "deploy.prototxt"
 
