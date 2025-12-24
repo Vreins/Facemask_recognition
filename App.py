@@ -15,10 +15,10 @@ pathlib.WindowsPath = pathlib.PosixPath
 # ---------------------------------------------------
 
 
-defaults.device = 'cpu'
+# defaults.device = 'cpu'
 
-learn = load_learner("model.pkl")
-learn.export("model_cpu.pkl")
+# learn = load_learner("model.pkl")
+# learn.export("model_cpu.pkl")
 
 model = YOLO("yolov8n-face.pt")  # download yolov8 face model
 
