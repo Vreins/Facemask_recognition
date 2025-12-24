@@ -12,6 +12,12 @@ from ultralytics import YOLO
 # LOAD MODEL
 # ---------------------------------------------------
 
+import pathlib
+if os.name == "posix":
+    pathlib.WindowsPath = pathlib.PosixPath
+elif os.name == "nt":
+    pathlib.PosixPath = pathlib.WindowsPath
+
 model = YOLO("yolov8n-face.pt")  # download yolov8 face model
 
 new_learner = load_learner("models/model.pkl")  # load FastAI model
