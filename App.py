@@ -7,12 +7,14 @@ import os
 import numpy as np
 import tempfile
 import pygame
-import cv2
-
+from ultralytics import YOLO
 # ---------------------------------------------------
 # LOAD MODEL
 # ---------------------------------------------------
-new_learner = load_learner("models/model.pkl")
+new_learner = load_learner("models/model.pkl")  # load FastAI model
+
+
+model = YOLO("yolov8n-face.pt")  # download yolov8 face model
 
 # ---------------------------------------------------
 # HELPER FUNCTIONS
@@ -42,31 +44,23 @@ def analyze_image_for_mask_temp(image_pil):
         st.error(f"Prediction error: {e}")
         return None, None
 
-def detect_faces_dnn(image_np):
-    """Detect faces using OpenCV DNN (works with headless opencv)"""
-    modelFile = "res10_300x300_ssd_iter_140000_fp16.caffemodel"
-    configFile = "deploy.prototxt"
+def detect_faces_yolo(image_pil):
+    """
+    Detect faces using YOLOv8.
+    Returns a list of bounding boxes: (x1, y1, x2, y2)
+    """
+    # Convert PIL to numpy
+    img_np = np.array(image_pil)
 
-    if not os.path.exists(modelFile) or not os.path.exists(configFile):
-        st.error("Face DNN model files not found. Download them.")
-        return []
+    # Run YOLO model
+    results = model.predict(img_np, imgsz=640, verbose=False)
 
-    net = cv2.dnn.readNetFromCaffe(configFile, modelFile)
-    (h, w) = image_np.shape[:2]
-    blob = cv2.dnn.blobFromImage(cv2.resize(image_np, (300, 300)), 1.0,
-                                 (300, 300), (104.0, 177.0, 123.0))
-    net.setInput(blob)
-    detections = net.forward()
     boxes = []
+    for r in results:
+        for box in r.boxes.xyxy.cpu().numpy():  # xyxy = [x1, y1, x2, y2]
+            x1, y1, x2, y2 = box.astype(int)
+            boxes.append((x1, y1, x2, y2))
 
-    for i in range(0, detections.shape[2]):
-        confidence = detections[0, 0, i, 2]
-        if confidence > 0.5:
-            box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
-            (startX, startY, endX, endY) = box.astype("int")
-            startX, startY = max(0, startX), max(0, startY)
-            endX, endY = min(w, endX), min(h, endY)
-            boxes.append((startX, startY, endX, endY))
     return boxes
 
 # ---------------------------------------------------
@@ -158,9 +152,8 @@ elif selected == "Facemask Identification":
         if st.button("😷 Detect Mask", width='stretch'):
             with st.spinner("Analyzing image... please wait..."):
                 try:
-                    # Convert PIL to OpenCV for detection
-                    image_np = cv2.cvtColor(np.array(source_img), cv2.COLOR_RGB2BGR)
-                    faces = detect_faces_dnn(image_np)
+                    # detection with yolo
+                    faces = detect_faces_yolo(source_img)
 
                     if len(faces) == 0:
                         st.error("No faces detected. Try another image.")
