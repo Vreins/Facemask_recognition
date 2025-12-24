@@ -1,3 +1,5 @@
+import os
+os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0"
 from fastai.vision.all import *
 import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
@@ -13,9 +15,7 @@ from ultralytics import YOLO
 # ---------------------------------------------------
 
 import pathlib
-if os.name == "posix":
-    pathlib.WindowsPath = pathlib.PosixPath
-elif os.name == "nt":
+if os.name == "nt":
     pathlib.PosixPath = pathlib.WindowsPath
 
 model = YOLO("yolov8n-face.pt")  # download yolov8 face model
