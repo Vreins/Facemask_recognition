@@ -8,23 +8,13 @@ import numpy as np
 import tempfile
 import pygame
 from ultralytics import YOLO
-import pathlib
-pathlib.WindowsPath = pathlib.PosixPath
 # ---------------------------------------------------
 # LOAD MODEL
 # ---------------------------------------------------
 
-
-# defaults.device = 'cpu'
-
-# learn = load_learner("model.pkl")
-# learn.export("model_cpu.pkl")
-
 model = YOLO("yolov8n-face.pt")  # download yolov8 face model
 
 new_learner = load_learner("models/model.pkl")  # load FastAI model
-
-
 
 # ---------------------------------------------------
 # HELPER FUNCTIONS
