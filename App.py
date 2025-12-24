@@ -11,10 +11,11 @@ from ultralytics import YOLO
 # ---------------------------------------------------
 # LOAD MODEL
 # ---------------------------------------------------
+model = YOLO("yolov8n-face.pt")  # download yolov8 face model
+
 new_learner = load_learner("models/model.pkl")  # load FastAI model
 
 
-model = YOLO("yolov8n-face.pt")  # download yolov8 face model
 
 # ---------------------------------------------------
 # HELPER FUNCTIONS
