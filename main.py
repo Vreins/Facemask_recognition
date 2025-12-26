@@ -20,8 +20,15 @@ if os.name == "nt":
 # ------------------------
 # Load models ONCE
 # ------------------------
-model = YOLO("yolov8n-face.pt")
-learner = load_learner("models/new_model.pkl")
+# model = YOLO("yolov8n-face.pt")
+# learner = load_learner("models/new_model.pkl")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global learner, model
+    model = YOLO("models/yolov8n-face.pt")
+    learner = load_learner("models/new_model.pkl")
+    yield
 
 app = FastAPI(title="Face Mask Detection API", lifespan=lifespan)
 
