@@ -26,7 +26,7 @@ if os.name == "nt":
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global learner, model
-    model = YOLO("models/yolov8n-face.pt")
+    model = YOLO("yolov8n-face.pt")
     learner = load_learner("models/new_model.pkl")
     yield
 
