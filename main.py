@@ -1,27 +1,28 @@
 import os
+import platform
+import pathlib
+
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastai.vision.all import *
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 from ultralytics import YOLO
-import pathlib
 import base64
 from io import BytesIO
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 
-# ------------------------
-# Windows path fix
-# ------------------------
-if os.name == "nt":
-    pathlib.PosixPath = pathlib.WindowsPath
 
+# ------------------------
 # ------------------------
 # Load models ONCE
 # ------------------------
 # model = YOLO("yolov8n-face.pt")
 # learner = load_learner("models/new_model.pkl")
+
+if platform.system() != "Windows":
+    pathlib.WindowsPath = pathlib.PosixPath
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
