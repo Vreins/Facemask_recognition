@@ -1,4 +1,5 @@
 import os
+os.environ["MPLCONFIGDIR"] = "/tmp"
 import platform
 import pathlib
 import torch
@@ -18,7 +19,7 @@ from torchvision import transforms
 import numpy as np
 from PIL import Image
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device("cpu")
 
 # ------------------------
 # ------------------------
@@ -36,10 +37,14 @@ async def lifespan(app: FastAPI):
     model = YOLO("yolov8n-face.pt")  # face detector
     # PyTorch ConvNeXt Tiny for mask detection
     model_mask = timm.create_model("convnext_tiny", pretrained=False, num_classes=2)
-    model_mask.load_state_dict(torch.load("models/convnext_tiny_mask.pth", map_location=DEVICE))
-    model_mask.to(DEVICE)
+    state = torch.load(
+        "models/convnext_tiny_mask.pth",
+        map_location="cpu"
+    )
+    model_mask.load_state_dict(state)
     model_mask.eval()
-    learner = model_mask  # replace learner with PyTorch model
+
+    learner = model_mask
     yield
 
 
