@@ -1,7 +1,7 @@
 import os
 import platform
 import pathlib
-
+import torch
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastai.vision.all import *
@@ -12,7 +12,13 @@ import base64
 from io import BytesIO
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
+import timm
 
+from torchvision import transforms
+import numpy as np
+from PIL import Image
+
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # ------------------------
 # ------------------------
@@ -27,9 +33,15 @@ if platform.system() != "Windows":
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global learner, model
-    model = YOLO("yolov8n-face.pt")
-    learner = load_learner("models/new_model.pkl")
+    model = YOLO("yolov8n-face.pt")  # face detector
+    # PyTorch ConvNeXt Tiny for mask detection
+    model_mask = timm.create_model("convnext_tiny", pretrained=False, num_classes=2)
+    model_mask.load_state_dict(torch.load("models/convnext_tiny_mask.pth", map_location=DEVICE))
+    model_mask.to(DEVICE)
+    model_mask.eval()
+    learner = model_mask  # replace learner with PyTorch model
     yield
+
 
 app = FastAPI(title="Face Mask Detection API", lifespan=lifespan)
 
@@ -38,10 +50,21 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # ------------------------
 # Helper functions
 # ------------------------
+val_tfms = transforms.Compose([
+    transforms.Resize((128,128)),  # match training
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485,0.456,0.406],
+                         std=[0.229,0.224,0.225])
+])
+
 def predict_mask_np(image_np: np.ndarray):
-    img_fastai = PILImage.create(image_np)
-    pred_class, _, _ = learner.predict(img_fastai)
-    return "Mask" if str(pred_class) == "1" else "No Mask"
+    image = Image.fromarray(image_np).convert("RGB")
+    image = val_tfms(image).unsqueeze(0).to(DEVICE)  # add batch dim
+    with torch.no_grad():
+        outputs = learner(image)  # raw logits
+        probs = torch.softmax(outputs, dim=1)
+        pred_class = torch.argmax(probs, dim=1).item()
+    return "Mask" if pred_class == 1 else "No Mask"  # adjust based on your label_map
 
 def image_to_base64(img: Image.Image):
     buffer = BytesIO()
