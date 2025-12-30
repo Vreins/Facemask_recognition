@@ -168,7 +168,8 @@ def annotate_image(image: Image.Image):
 # ------------------------
 @app.get("/warmup")
 async def warmup():
-    download_mask_model
+    print("🔥 Warming up models...")
+    download_mask_model()
     get_face_model()
     get_mask_model()
     return {"status": "models ready"}
