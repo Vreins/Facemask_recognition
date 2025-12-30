@@ -34,6 +34,16 @@ if platform.system() != "Windows":
 model = None          # YOLO
 learner = None 
 
+
+
+def get_face_model():
+    global model
+    if model is None:
+        print("🔥 Loading YOLO face model...")
+        model = YOLO("yolov8n-face.pt")
+        print("✅ YOLO loaded")
+    return model
+
 # @asynccontextmanager
 # async def lifespan(app: FastAPI):
 #     print("🔥 Lifespan starting")
@@ -56,6 +66,12 @@ learner = None
 app = FastAPI(title="Face Mask Detection API")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/warmup")
+async def warmup():
+    get_face_model()
+    get_mask_model()
+    return {"status": "models ready"}
 
 def get_mask_model():
     global learner
@@ -108,9 +124,10 @@ def image_to_base64(img: Image.Image):
     return base64.b64encode(buffer.getvalue()).decode()
 
 def annotate_image(image: Image.Image):
-    model = YOLO("yolov8n-face.pt")
+    model = get_face_model()   # ✅ reuse model
     img_np = np.array(image)
     results = model.predict(img_np, imgsz=320, verbose=False)
+
 
     annotated = image.copy()
     draw = ImageDraw.Draw(annotated)
