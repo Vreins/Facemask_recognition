@@ -53,7 +53,7 @@ learner = None
 #     yield
 
 
-app = FastAPI(title="Face Mask Detection API", lifespan=lifespan)
+app = FastAPI(title="Face Mask Detection API")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
