@@ -18,9 +18,20 @@ import timm
 from torchvision import transforms
 import numpy as np
 from PIL import Image
+import urllib.request
 
 DEVICE = torch.device("cpu")
 
+MODEL_PATH = "models/convnext_tiny_mask.pth"
+MODEL_URL = "https://github.com/Vreins/Facemask_recognition/releases/download/V1/convnext_tiny_mask.pth"
+
+os.makedirs("models", exist_ok=True)
+
+if not os.path.exists(MODEL_PATH):
+    print("⬇️ Downloading ConvNeXt model...")
+    urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
+    print("✅ ConvNeXt model downloaded")
+    
 # ------------------------
 # ------------------------
 # Load models ONCE
