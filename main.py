@@ -57,35 +57,9 @@ def get_face_model():
         print("✅ YOLO loaded")
     return model
 
-# @asynccontextmanager
-# async def lifespan(app: FastAPI):
-#     print("🔥 Lifespan starting")
-#     global model
-#     model = YOLO("yolov8n-face.pt")  # face detector
-#     # PyTorch ConvNeXt Tiny for mask detection
-#     # model_mask = timm.create_model("convnext_tiny", pretrained=False, num_classes=2)
-#     # state = torch.load(
-#     #     "models/convnext_tiny_mask.pth",
-#     #     map_location="cpu"
-#     # )
-    
-#     # model_mask.load_state_dict(state)
-#     # model_mask.eval()
-#     print("🔥 Models loaded")
-#     # learner = model_mask
-#     yield
-
-
 app = FastAPI(title="Face Mask Detection API")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
-@app.get("/warmup")
-async def warmup():
-    download_mask_model
-    get_face_model()
-    get_mask_model()
-    return {"status": "models ready"}
 
 def get_mask_model():
     global learner
@@ -192,6 +166,13 @@ def annotate_image(image: Image.Image):
 # ------------------------
 # API (UNCHANGED)
 # ------------------------
+@app.get("/warmup")
+async def warmup():
+    download_mask_model
+    get_face_model()
+    get_mask_model()
+    return {"status": "models ready"}
+
 @app.post("/detect/")
 async def detect_mask(file: UploadFile = File(...)):
     try:
