@@ -33,6 +33,7 @@ if platform.system() != "Windows":
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    print("🔥 Lifespan starting")
     global learner, model
     model = YOLO("yolov8n-face.pt")  # face detector
     # PyTorch ConvNeXt Tiny for mask detection
@@ -41,9 +42,10 @@ async def lifespan(app: FastAPI):
         "models/convnext_tiny_mask.pth",
         map_location="cpu"
     )
+    
     model_mask.load_state_dict(state)
     model_mask.eval()
-
+    print("🔥 Models loaded")
     learner = model_mask
     yield
 
