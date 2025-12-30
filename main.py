@@ -34,23 +34,23 @@ if platform.system() != "Windows":
 model = None          # YOLO
 learner = None 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    print("🔥 Lifespan starting")
-    global model
-    model = YOLO("yolov8n-face.pt")  # face detector
-    # PyTorch ConvNeXt Tiny for mask detection
-    # model_mask = timm.create_model("convnext_tiny", pretrained=False, num_classes=2)
-    # state = torch.load(
-    #     "models/convnext_tiny_mask.pth",
-    #     map_location="cpu"
-    # )
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     print("🔥 Lifespan starting")
+#     global model
+#     model = YOLO("yolov8n-face.pt")  # face detector
+#     # PyTorch ConvNeXt Tiny for mask detection
+#     # model_mask = timm.create_model("convnext_tiny", pretrained=False, num_classes=2)
+#     # state = torch.load(
+#     #     "models/convnext_tiny_mask.pth",
+#     #     map_location="cpu"
+#     # )
     
-    # model_mask.load_state_dict(state)
-    # model_mask.eval()
-    print("🔥 Models loaded")
-    # learner = model_mask
-    yield
+#     # model_mask.load_state_dict(state)
+#     # model_mask.eval()
+#     print("🔥 Models loaded")
+#     # learner = model_mask
+#     yield
 
 
 app = FastAPI(title="Face Mask Detection API", lifespan=lifespan)
@@ -108,6 +108,7 @@ def image_to_base64(img: Image.Image):
     return base64.b64encode(buffer.getvalue()).decode()
 
 def annotate_image(image: Image.Image):
+    model = YOLO("yolov8n-face.pt")
     img_np = np.array(image)
     results = model.predict(img_np, imgsz=320, verbose=False)
 
