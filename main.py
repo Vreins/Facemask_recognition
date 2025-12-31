@@ -12,12 +12,8 @@ from ultralytics import YOLO
 import base64
 from io import BytesIO
 from fastapi.staticfiles import StaticFiles
-from contextlib import asynccontextmanager
 import timm
-
 from torchvision import transforms
-import numpy as np
-from PIL import Image
 import urllib.request
 
 DEVICE = torch.device("cpu")
@@ -32,22 +28,11 @@ def download_mask_model():
         urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
         print("✅ ConvNeXt model downloaded")
 
-
-
-# ------------------------
-# ------------------------
-# Load models ONCE
-# ------------------------
-# model = YOLO("yolov8n-face.pt")
-# learner = load_learner("models/new_model.pkl")
-
 if platform.system() != "Windows":
     pathlib.WindowsPath = pathlib.PosixPath
 
 model = None          # YOLO
 learner = None 
-
-
 
 def get_face_model():
     global model
@@ -63,7 +48,6 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 def get_mask_model():
     global learner
-
     if learner is None:
         print("🔥 Lazy-loading ConvNeXt...")
 
@@ -89,14 +73,15 @@ def get_mask_model():
 # ------------------------
 # Helper functions
 # ------------------------
-val_tfms = transforms.Compose([
+
+
+def predict_mask_np(image_np: np.ndarray):
+    val_tfms = transforms.Compose([
     transforms.Resize((128,128)),  # match training
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485,0.456,0.406],
                          std=[0.229,0.224,0.225])
-])
-
-def predict_mask_np(image_np: np.ndarray):
+    ])
     image = Image.fromarray(image_np).convert("RGB")
     image = val_tfms(image).unsqueeze(0).to(DEVICE)  # add batch dim
     with torch.no_grad():
@@ -115,11 +100,8 @@ def annotate_image(image: Image.Image):
     model = get_face_model()   # ✅ reuse model
     img_np = np.array(image)
     results = model.predict(img_np, imgsz=320, verbose=False)
-
-
     annotated = image.copy()
     draw = ImageDraw.Draw(annotated)
-
     try:
         font_size = max(20, annotated.height // 25)
         font = ImageFont.truetype("arial.ttf", size=font_size)
