@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 import timm
 from torchvision import transforms
 import urllib.request
+import uvicorn
 
 torch.set_num_threads(1)
 torch.set_num_interop_threads(1)
@@ -416,3 +417,7 @@ function stopCamera(){
 </body>
 </html>
 """)
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
