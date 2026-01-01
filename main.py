@@ -5,7 +5,7 @@ import pathlib
 import torch
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse, HTMLResponse
-from fastai.vision.all import *
+# from fastai.vision.all import *
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 from ultralytics import YOLO
