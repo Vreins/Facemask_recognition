@@ -16,6 +16,9 @@ import timm
 from torchvision import transforms
 import urllib.request
 
+torch.set_num_threads(1)
+torch.set_num_interop_threads(1)
+
 DEVICE = torch.device("cpu")
 
 MODEL_PATH = "models/convnext_tiny_mask.pth"
@@ -74,21 +77,21 @@ def get_mask_model():
 # Helper functions
 # ------------------------
 
-
-def predict_mask_np(image_np: np.ndarray):
-    val_tfms = transforms.Compose([
+val_tfms = transforms.Compose([
     transforms.Resize((128,128)),  # match training
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485,0.456,0.406],
                          std=[0.229,0.224,0.225])
     ])
+
+def predict_mask_np(image_np, model):
     image = Image.fromarray(image_np).convert("RGB")
     image = val_tfms(image).unsqueeze(0).to(DEVICE)  # add batch dim
-    with torch.no_grad():
-        learner=get_mask_model()
-        outputs = learner(image)  # raw logits
-        probs = torch.softmax(outputs, dim=1)
-        pred_class = torch.argmax(probs, dim=1).item()
+    with torch.inference_mode():
+        # learner=get_mask_model()
+        outputs = model(image)  # raw logits
+        # probs = torch.softmax(outputs, dim=1)
+        pred_class = outputs.argmax(dim=1).item()
     return "Mask" if pred_class == 1 else "No Mask"  # adjust based on your label_map
 
 def image_to_base64(img: Image.Image):
@@ -97,11 +100,15 @@ def image_to_base64(img: Image.Image):
     return base64.b64encode(buffer.getvalue()).decode()
 
 def annotate_image(image: Image.Image):
-    model = get_face_model()   # ✅ reuse model
+    face_model = get_face_model()      # YOLO (cached)
+    mask_model = get_mask_model()      # ConvNeXt (cached)
+
     img_np = np.array(image)
-    results = model.predict(img_np, imgsz=320, verbose=False)
+    results = face_model.predict(img_np, imgsz=320, verbose=False)
+
     annotated = image.copy()
     draw = ImageDraw.Draw(annotated)
+
     try:
         font_size = max(20, annotated.height // 25)
         font = ImageFont.truetype("arial.ttf", size=font_size)
@@ -117,26 +124,26 @@ def annotate_image(image: Image.Image):
         for box in r.boxes.xyxy.cpu().numpy():
             x1, y1, x2, y2 = map(int, box)
 
-            face = annotated.crop((x1, y1, x2, y2)).resize((224, 224))
-            label = predict_mask_np(np.array(face))
+            # Crop face
+            face = annotated.crop((x1, y1, x2, y2))
+            label = predict_mask_np(np.array(face), mask_model)
 
             color = (0, 255, 0) if label == "Mask" else (255, 0, 0)
 
+            # Draw bounding box
             draw.rectangle([x1, y1, x2, y2], outline=color, width=4)
-            text_x=x1+5
-            text_y=y1+5
 
-            bbox = draw.textbbox((0,0), label, font=font)
-            text_w = bbox[2] - bbox[0]
-            text_h = bbox[3] - bbox[1]
+            # Draw label
+            text_x, text_y = x1 + 5, y1 + 5
+            bbox = draw.textbbox((0, 0), label, font=font)
+            text_w, text_h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+
             draw.rectangle(
-                [text_x-3, text_y-3, text_x + text_w + 3, text_y + text_h + 3],
+                [text_x - 3, text_y - 3,
+                 text_x + text_w + 3, text_y + text_h + 3],
                 fill=(255, 255, 255, 200)
             )
             draw.text((text_x, text_y), label, fill=color, font=font)
-            # draw.text((text_x, text_y), label, fill=color, font=font)
-
-            # draw.text((x1, y1 - 10), label, fill=color, font=font)
 
             faces.append({
                 "bbox": [x1, y1, x2, y2],
@@ -145,6 +152,8 @@ def annotate_image(image: Image.Image):
 
     return annotated, faces
 
+
+
 # ------------------------
 # API (UNCHANGED)
 # ------------------------
@@ -152,22 +161,18 @@ def annotate_image(image: Image.Image):
 async def warmup():
     print("🔥 Warming up models...")
     download_mask_model()
-    get_face_model()
-    get_mask_model()
     return {"status": "models ready"}
 
 @app.post("/detect/")
 async def detect_mask(file: UploadFile = File(...)):
-    try:
-        image = Image.open(file.file).convert("RGB")
-        annotated, faces = annotate_image(image)
-        return JSONResponse({
-            "image": image_to_base64(annotated),
-            "faces": faces,
-            "num_faces": len(faces)
-        })
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+    image = Image.open(file.file).convert("RGB")
+    annotated, faces = annotate_image(image)
+    return JSONResponse({
+        "image": image_to_base64(annotated),
+        "faces": faces,
+        "num_faces": len(faces)
+    })
+
 
 # =====================================================
 # FRONTEND PAGES (STREAMLIT-LIKE)
@@ -176,6 +181,7 @@ async def detect_mask(file: UploadFile = File(...)):
 # ------------------------
 # HOME PAGE
 # ------------------------
+
 @app.get("/", response_class=HTMLResponse)
 async def home():
     return HTMLResponse("""
